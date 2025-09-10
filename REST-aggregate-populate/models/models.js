@@ -1,6 +1,4 @@
-// brand.model.js
 import mongoose from "mongoose";
-
 
 const InstrumentSchema = new mongoose.Schema(
 	{
@@ -34,7 +32,6 @@ const RepSchema = new mongoose.Schema(
 );
 export const Rep = mongoose.model("Rep", RepSchema);
 
-
 const BrandSchema = new mongoose.Schema(
 	{
 		name: { type: String, required: true, unique: true },
@@ -47,7 +44,3 @@ const BrandSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 export const Brand = mongoose.model("Brand", BrandSchema);
-
-
-
-
