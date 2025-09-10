@@ -3,14 +3,14 @@ import { Instrument, Brand } from "../models/models.js";
 export const resolvers = {
 	Query: {
 		async instruments() {
-			const docs = await Instrument.find().lean();
-			return docs.map((d) => ({ d, _noDataloader: true }));
+			const docs = await Instrument.find().populate("brand");
+			return docs;
 		},
 	},
 
 	Instrument: {
 		id: (doc) => String(doc._id),
-		brand: async (doc) => await Brand.findById(doc.brand),
+		brand: (doc) => doc.brand ?? null,
 	},
 
 	Brand: {

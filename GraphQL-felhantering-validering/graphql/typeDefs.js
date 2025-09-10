@@ -40,9 +40,13 @@ export const typeDefs = /* GraphQL */ `
 	}
 
 	type Query {
-        instruments(limit: Int = 20): [Instrument!]!
+		instruments(limit: Int = 20): [Instrument!]!
 		instrument(id: ID!): Instrument
 	}
+
+	# CreateInstrumentInput
+	# CreateBrandInput
+	# CreateRepInput
 
 	input UpdateStockInput {
 		id: ID!

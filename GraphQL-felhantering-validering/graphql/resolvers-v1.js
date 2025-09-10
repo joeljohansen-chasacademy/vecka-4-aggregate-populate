@@ -3,12 +3,23 @@ import { Instrument, Brand, Rep } from "../models/models.js";
 
 export const resolversV1 = {
 	Query: {
-		instruments: async (_p, { limit }) => {},
-		instrument: async (_p, { id }) => {},
+		instruments: async (_p, { limit }) => {
+			const instruments = await Instrument.find();
+			return instruments;
+		},
+		instrument: async (_p, { id }) => {
+			return Instrument.findById(id);
+		},
 	},
 
 	Mutation: {
-		updateInstrumentStock: async (_p, { input }) => {},
+		updateInstrumentStock: async (_p, { input }) => {
+			const { id, delta } = input;
+			const instrument = await Instrument.findById(id);
+			instrument.amountInStock += delta;
+			await instrument.save();
+			return instrument;
+		},
 	},
 
 	Instrument: {
