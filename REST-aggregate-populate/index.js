@@ -100,25 +100,6 @@ app.get("/instruments/stock-by-brand", async (_req, res) => {
 			},
 		]);
 
-		/*
-        * ALTERNATIVE PIPELINE ( utan $project steget)
-        await Instrument.aggregate([
-              { $lookup: { from: "brands", localField: "brand", foreignField: "_id", as: "b" } },
-              { $unwind: "$b" },
-              {
-                $group: {
-                  _id: "$b.name",
-                  total: {
-                    $sum: {
-                      $multiply: [ { $toDouble: "$price" }, "$amountInStock" ]
-                    }
-                  }
-                }
-              },
-              { $project: { _id: 0, brand: "$_id", total: 1 } },
-              { $sort: { total: -1 } }
-            ]);
-        */
 		res.json(out);
 	} catch (error) {}
 });
