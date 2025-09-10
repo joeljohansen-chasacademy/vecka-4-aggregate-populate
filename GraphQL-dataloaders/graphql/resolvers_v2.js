@@ -11,6 +11,11 @@ export const resolvers = {
 	Instrument: {
 		id: (doc) => String(doc._id),
 		brand: (doc) => doc.brand ?? null,
+		/*
+        Här hade vi också kunnat skriva och hämta branden med await Brand.findById(doc.brand),
+        om det inte populerats tidigare.
+        brand: (doc) => doc.brand ?? await Brand.findById(doc.brand),
+        */
 	},
 
 	Brand: {
