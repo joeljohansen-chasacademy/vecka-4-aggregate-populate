@@ -59,6 +59,39 @@ app.get("/instruments/agg", async (req, res) => {
  */
 app.get("/instruments/total-stock-value", async (_req, res) => {
 	try {
+		const out = await Instrument.aggregate([
+			{
+				/**  Steg 1: $project ->
+				 * Med project kan vi välja fält vi vill ha ut
+				 * eller skapa nya egna fält. (se under extras)
+				 * I denna project skulle vi kunna skapa ett nytt
+				 * fält som heter value och i det fältet kan vi köra
+				 * ett uttryck (exempelvis $multiply) för att räkna ut det totala värdet
+				 * //Förväntat resultat ungefär:
+				 * [
+				 *   {
+				 *     _id: ObjectId("..."),
+				 *     name: "Telecaster",
+				 *     price: 1200,
+				 *     amountInStock: 5,
+				 *     value: 6000
+				 *   },
+				 *   ...
+				 * ]
+				 */
+			},
+			{
+				/**  Steg 2: $group
+				 * Nu har vi en lista med alla instrument där vi har ett nytt fält som heter
+				 * "value" under varje instrument och det fältet vill vi nu summera för alla instrument
+				 * Med group kan vi gruppera ALLA instrument genom att sätta _id: null
+				 * och sen skapa ett nytt värde som heter "total" ex. där vi gör själva
+				 * summeringen med $sum
+				 * Förväntat resultat ungefär: [{_id:null, total:134803498}]
+				 */
+			},
+		]);
+		res.json({ total: out[0]?.total ?? 0 });
 	} catch (error) {}
 });
 
@@ -116,12 +149,86 @@ app.get("/instruments/low-stock", async (_req, res) => {
 
 /**
  * GET /instruments/critical-stock (amountInStock < 5) – kompakt lista
- * – använd aggregation för att skapa en critical list (amountInStock < 5)
  * – Returnera: [{ instrumentName, brand, repName, phone, email }]
  */
 app.get("/instruments/critical-stock", async (_req, res) => {
 	try {
-	} catch (error) {}
+		const out = await Instrument.aggregate([
+			{
+				/** Steg 1: $match – filtrera kritiskt lågt lager */
+				/*
+				 * Förväntat resultat ungefär:
+				 * [
+				 *   { _id: "...", name: "Stratocaster", brand: ObjectId("b1"), amountInStock: 2, ... },
+				 *   { _id: "...", name: "TR-808",      brand: ObjectId("b2"), amountInStock: 1, ... },
+				 *   ...
+				 * ]
+				 */
+			},
+			{
+				/** Steg 2: $lookup – hämta brand-objektet (join mot brands) */
+				/*
+				 * Efter $lookup (brand blir en array):
+				 * [
+				 *   { name: "Stratocaster", amountInStock: 2, brand: [{ _id: "b1", name: "Fender", rep: ObjectId("r1"), ... }] },
+				 *   { name: "TR-808",      amountInStock: 1, brand: [{ _id: "b2", name: "Roland", rep: ObjectId("r2"), ... }] },
+				 *   ...
+				 * ]
+				 */
+			},
+			{
+				/** Steg 3: $unwind – gör brand till ett objekt istället för array */
+				/*
+				 * Efter $unwind:
+				 * [
+				 *   { name: "Stratocaster", amountInStock: 2, brand: { _id: "b1", name: "Fender", rep: ObjectId("r1"), ... } },
+				 *   { name: "TR-808",      amountInStock: 1, brand: { _id: "b2", name: "Roland", rep: ObjectId("r2"), ... } },
+				 * ]
+				 */
+			},
+			{
+				/** Steg 4: $lookup – hämta rep via brand.rep (join mot reps) */
+				/*
+				 * Efter $lookup av rep (rep blir array):
+				 * [
+				 *   { name: "Stratocaster", brand: { name: "Fender", rep: "r1" }, rep: [{ _id: "r1", name: "Alice", phone: "070-...", email: "alice@..." }] },
+				 *   { name: "TR-808",      brand: { name: "Roland", rep: "r2" }, rep: [{ _id: "r2", name: "Kenji", phone: "+81...", email: "kenji@..." }] },
+				 * ]
+				 */
+			},
+			{
+				/** Steg 5: $unwind – gör rep till ett objekt */
+				/*
+				 * Efter $unwind (om rep saknas blir rep: null):
+				 * [
+				 *   { name: "Stratocaster", brand: { name: "Fender" }, rep: { name: "Alice", phone: "070-...", email: "alice@..." } },
+				 *   { name: "TR-808",      brand: { name: "Roland" }, rep: { name: "Kenji", phone: "+81...", email: "kenji@..." } },
+				 * ]
+				 */
+			},
+			{
+				/** Steg 6: $project – forma det kompakta svaret och döp om fält */
+				/*
+				 * Förväntat resultat ungefär:
+				 * [
+				 *   { instrumentName: "Stratocaster", brand: "Fender", repName: "Alice Andersson", phone: "070-1234567", email: "alice@fender.com" },
+				 *   { instrumentName: "TR-808",      brand: "Roland", repName: "Kenji Tanaka",     phone: "+81 123 456 789", email: "kenji@roland.com" }
+				 * ]
+				 */
+			},
+			{
+				/** (Valfritt) Steg 7: $sort – t.ex. visa minst först, sedan alfabetiskt */
+				/*
+				 * Sorterad lista i samma struktur som ovan.
+				 */
+			},
+		]);
+
+		res.json(out);
+	} catch (error) {
+		console.error("[/instruments/critical-stock] error:", error);
+		res.status(500).json({ error: "Failed to build critical stock list" });
+	}
 });
 
 /**
